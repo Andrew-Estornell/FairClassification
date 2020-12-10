@@ -56,7 +56,10 @@ def get_sample_weight(df, key='race'):
     elif key == 'both':
         return minMax1D(compute_sample_weight('balanced',df['race'] + df['sex'].astype(str))**1)
 
+df = pd.read_csv('processed_adults.csv')
+df = df[df.race.str.contains('White') | df.race.str.contains('Black')]
 isValidation = np.random.randint(10,size=df.shape[0])>6
+
 dfs = []
 valid_dfs = []
 GBC_dict = {}
