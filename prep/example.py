@@ -38,10 +38,10 @@ def prep(file_name, target_col, remove_cols, rev, bin_vals=None):
 
     return df, target
 
-info    = [('data/recidivism/Data_1980.csv',            'RECID',               ['TIME','FILE'], {},                                       ['WHITE'],       1),
+info    = [('data/Data_1980.csv',            'RECID',               ['TIME','FILE'], {},                                       ['WHITE'],       1),
 		 ('data/adult.csv',                            'income',              [],              {'race': (' White', ' Black')},           ['race'],        0),
-		 ('data/communities2.csv',                      'ViolentCrimesPerPop', [],              {},                                       ['race'],        1),
-		 ('data/lawschool2.csv',                        'bar1',                [],              {},                                       ['race'],        0),
+		 ('data/communities.csv',                      'ViolentCrimesPerPop', [],              {},                                       ['race'],        1),
+		 ('data/lawschool.csv',                        'bar1',                [],              {},                                       ['race'],        0),
 		 ('data/student-mat.csv',                      'G3',                  [],              {},                                       ['sex'],         0)]
 
 f_save_names = ['recidivism',
@@ -53,3 +53,4 @@ f_save_names = ['recidivism',
 
 for file_name, target_column, cols_to_remove, variables_to_be_made_binary, sensative_features, flip_0_and_1_labes in info:
     X, y = prep(file_name,  target_column, cols_to_remove, flip_0_and_1_labes, bin_vals=variables_to_be_made_binary)
+    print(X,y)
