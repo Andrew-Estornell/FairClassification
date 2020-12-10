@@ -38,11 +38,11 @@ def prep(file_name, target_col, remove_cols, rev, bin_vals=None):
 
     return df, target
 
-info    = [('datasets/recidivism/Data_1980.csv',            'RECID',               ['TIME','FILE'], {},                                       ['WHITE'],       1),
-		 ('dataset/adult.csv',                            'income',              [],              {'race': (' White', ' Black')},           ['race'],        0),
-		 ('dataset/communities2.csv',                      'ViolentCrimesPerPop', [],              {},                                       ['race'],        1),
-		 ('dataset/lawschool2.csv',                        'bar1',                [],              {},                                       ['race'],        0),
-		 ('dataset/student-mat.csv',                      'G3',                  [],              {},                                       ['sex'],         0)]
+info    = [('data/recidivism/Data_1980.csv',            'RECID',               ['TIME','FILE'], {},                                       ['WHITE'],       1),
+		 ('data/adult.csv',                            'income',              [],              {'race': (' White', ' Black')},           ['race'],        0),
+		 ('data/communities2.csv',                      'ViolentCrimesPerPop', [],              {},                                       ['race'],        1),
+		 ('data/lawschool2.csv',                        'bar1',                [],              {},                                       ['race'],        0),
+		 ('data/student-mat.csv',                      'G3',                  [],              {},                                       ['sex'],         0)]
 
 f_save_names = ['recidivism',
 				'adult',
