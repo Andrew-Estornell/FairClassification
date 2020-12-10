@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn import linear_model
-from gerryfair.reg_oracle_class import RegOracle
+from fair.reg_oracle_class import RegOracle
 
 class Group(object):
     """Group class: created by Auditor when identifying violation"""

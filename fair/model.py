@@ -1,12 +1,10 @@
 import numpy as np
 import pandas as pd
 from sklearn import linear_model
-import gerryfair.fairness_plots
-import gerryfair.heatmap
-from gerryfair.learner import Learner
-from gerryfair.auditor import Auditor
-from gerryfair.classifier_history import ClassifierHistory
-from gerryfair.reg_oracle_class import RegOracle
+from fair.learner import Learner
+from fair.auditor import Auditor
+from fair.classifier_history import ClassifierHistory
+from fair.reg_oracle_class import RegOracle
 import matplotlib
 import random
 from sklearn.linear_model import LinearRegression
@@ -60,7 +58,7 @@ class Model:
             errors.append(error)
             fairness_violations.append(group.weighted_disparity)
             self.print_outputs(iteration, error, group)
-            vmin, vmax = self.save_heatmap(iteration, X, X_prime, y, history.get_most_recent().predict(X), vmin, vmax)
+            #vmin, vmax = self.save_heatmap(iteration, X, X_prime, y, history.get_most_recent().predict(X), vmin, vmax)
             iteration += 1
 
             # early termination:
@@ -95,19 +93,6 @@ class Model:
                     group.weighted_disparity,
                     group.group_size))
 
-    def save_heatmap(self, iteration, X, X_prime, y, predictions, vmin, vmax):
-        '''Helper method: save heatmap frame'''
-
-        # save heatmap every heatmap_iter iterations
-        if self.heatmapflag and (iteration % self.heatmap_iter) == 0:
-            # initial heat map
-            X_prime_heat = X_prime.iloc[:, 0:2]
-            eta = 0.1
-            minmax = heatmap.heat_map(X, X_prime_heat, y, predictions_t, eta, self.heatmap_path + '/heatmap_iteration_{}'.format(iteration), vmin, vmax)
-            if iteration == 1:
-                vmin = minmax[0]
-                vmax = minmax[1]
-        return vmin, vmax
 
 
     ################ EDITED ########################

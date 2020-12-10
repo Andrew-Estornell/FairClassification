@@ -1,7 +1,7 @@
 import numpy as np
 import copy
 from sklearn import linear_model
-from gerryfair.reg_oracle_class import RegOracle
+from fair.reg_oracle_class import RegOracle
 
 import random as rand
 
