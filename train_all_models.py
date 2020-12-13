@@ -33,7 +33,7 @@ def fair_clf(sense_feats=None, reg=LinearRegression(), fairness='FP', C=10, gamm
     if sense_feats == None:
         print("Fair model requires sensitive features.")
         exit(-1)
-    return fmodel.Model(sense_feats, C=C, printflag=verbose, max_iters=max_iters, gamma=0.01, fairness_def=fairness, predictor=reg)
+    return fmodel.Model(sense_feats, C=C, printflag=verbose, max_iters=max_iters, gamma=gamma, fairness_def=fairness, predictor=reg)
 
 def process_categorical(df, discrete_cols):
     for col in discrete_cols:
@@ -87,7 +87,7 @@ models = [GridSearchCV(GBC(), param_grid=GBC_params, n_jobs=n_jobs, cv=5),\
 #                          GridSearchCV(SVR(),param_grid=SVR_params, cv=5),\
 #                          LinearRegression() ]
 base_fairer_regressors = [GBR(), SVR(), LinearRegression()]
-fair_gamma_opts = [0.01]#[0.2,0.1,0.01]
+fair_gamma_opts = [0.2,0.1,0.01]
 fairer_models = []
 fairer_model_names = []
 
@@ -111,6 +111,8 @@ for dataset, label, cols_to_drop, sens_feats in zip(datasets, labels, cols_to_dr
     else:
         index_col = None
     
+    dataset_saveData = {}
+    
     df = pd.read_csv('data/'+dataset+'.csv', index_col=index_col)
     df.drop(cols_to_drop, axis=1, inplace=True)
     discrete_cols = [x for x in df.columns if df[x].dtype==np.dtype('O')]
@@ -131,14 +133,20 @@ for dataset, label, cols_to_drop, sens_feats in zip(datasets, labels, cols_to_dr
         
         trainY = Y[train_ind]
         testY = Y[test_ind]
-        with open(models_dir+'scaler_'+dataset+'split'+str(i)+'.pickle','wb') as handle:
-                pickle.dump(scaler, handle, pickle.HIGHEST_PROTOCOL)
+        dataset_saveData['split'+str(i)] = {}
+        #with open(models_dir+'scaler_split'+str(i)+'.pickle','wb') as handle:
+                #pickle.dump(scaler, handle, pickle.HIGHEST_PROTOCOL)
+        dataset_saveData['split'+str(i)]['scaler'] = scaler
+        dataset_saveData['split'+str(i)]['test_data'] = df.iloc[test_ind].copy()
+        dataset_saveData['split'+str(i)]['models'] = {}
+        
         df.iloc[test_ind].to_csv(models_dir+'test_dataframe_'+dataset+'split'+str(i)+'.csv')
         
         for model, modelname in zip(models, model_names):
             model.fit(trainX, trainY)
-            with open(models_dir+'optimal_'+modelname+dataset+'split'+str(i)+'.pickle','wb') as handle:
-                pickle.dump(model, handle, pickle.HIGHEST_PROTOCOL)
+            #with open(models_dir+'optimal_'+modelname+dataset+'split'+str(i)+'.pickle','wb') as handle:
+                #pickle.dump(model, handle, pickle.HIGHEST_PROTOCOL)
+            dataset_saveData['split'+str(i)]['models']['optimal_'+modelname] = model
             print(dataset, modelname, roc_auc_score(testY, model.predict(testX)))
 
         for feat_combo in return_combo_arrs(sens_feats):
@@ -146,8 +154,9 @@ for dataset, label, cols_to_drop, sens_feats in zip(datasets, labels, cols_to_dr
             sample_weight = get_sample_weight(df.iloc[train_ind], feat_combo)
             for model, modelname in zip(models,model_names):
                 model.fit(trainX,trainY, sample_weight=sample_weight)
-                with open(models_dir+arr_to_string(feat_combo)+'_'+modelname+dataset+'split'+str(i)+'.pickle','wb') as handle:
-                    pickle.dump(model, handle, pickle.HIGHEST_PROTOCOL)
+                #with open(models_dir+arr_to_string(feat_combo)+'_'+modelname+dataset+'split'+str(i)+'.pickle','wb') as handle:
+                    #pickle.dump(model, handle, pickle.HIGHEST_PROTOCOL)
+                dataset_saveData['split'+str(i)]['models'][arr_to_string(feat_combo)+'_'+modelname] = model
                 print(dataset, modelname, arr_to_string(feat_combo), roc_auc_score(testY, model.predict(testX)))
 
             '''better fairness'''
@@ -162,10 +171,13 @@ for dataset, label, cols_to_drop, sens_feats in zip(datasets, labels, cols_to_dr
                     fair_trainX = pd.DataFrame(scaler.transform(df.iloc[train_ind].drop([label],axis=1).values), columns=df.iloc[train_ind].drop([label],axis=1).columns)
                     fair_testX = pd.DataFrame(scaler.transform(df.iloc[test_ind].drop([label],axis=1).values), columns=df.iloc[test_ind].drop([label],axis=1).columns)
                     model.fit(fair_trainX,df.iloc[train_ind][label])
-                    with open(models_dir+arr_to_string(feat_combo)+'_betterFairness_gamma'+str(gamma)+modelname+dataset+'split'+str(i)+'.pickle','wb') as handle:
-                        pickle.dump(model, handle, pickle.HIGHEST_PROTOCOL)
+                    #with open(models_dir+arr_to_string(feat_combo)+'_betterFairness_gamma'+str(gamma)+modelname+dataset+'split'+str(i)+'.pickle','wb') as handle:
+                        #pickle.dump(model, handle, pickle.HIGHEST_PROTOCOL)
+                    dataset_saveData['split'+str(i)]['models'][arr_to_string(feat_combo)+'_betterFairness_gamma'+str(gamma)+modelname] = model
+                    arr_to_string(feat_combo)+'_'+modelname
                     print(dataset, modelname, 'better', arr_to_string(feat_combo), roc_auc_score(testY, model.predict(df.iloc[test_ind].drop([label],axis=1))))
-        
+        with open(models_dir+dataset+'_trainedModelInfo.pickle', 'wb') as handle:
+            pickle.dump(dataset_saveData, handle, pickle.HIGHEST_PROTOCOL)
                 
             
             
