@@ -21,11 +21,11 @@ Min for max_iter = 50
 '''
 
 
-def fair_clf(sense_feats=None, reg=GridSearchCV(GBR(),param_grid=GBC_params, n_jobs=-1), fairness='FP', C=10, gamma=0.01, max_iters=100, verbose=False):
+def fair_clf(sense_feats=None, reg=LinearRegression(), fairness='FP', C=10, gamma=0.1, max_iters=50, verbose=False):
     if sense_feats == None:
         print("Fair model requires sensitive features.")
         exit(-1)
-    return model.Model(sense_feats, C=C, printflag=verbose, max_iters=max_iters, gamma=0.01, fairness_def=fairness, predictor=reg)
+    return model.Model(sense_feats, C=C, printflag=verbose, max_iters=max_iters, gamma=gamma, fairness_def=fairness, predictor=reg)
 
 def gen_param_grid(param_grid):
     keys = list(param_grid.keys())
@@ -49,9 +49,9 @@ if __name__ == "__main__":
     reg = GBR()
     GBC_params = {'max_depth':[3, 6, 10], 'n_estimators':[250,500]}
     
-    fclf = fair_clf(sense_feats=sense_feats, reg=regressor)
+    fclf = fair_clf(sense_feats=sense_feats, reg=reg)
     reg_params = gen_param_grid(GBC_params)
-    fclf = GridSearchCV(fclf, reg_params, n_jobs=-1, scoring=make_scorer(balanced_accuracy_score))
+    fclf = GridSearchCV(fclf, reg_params, n_jobs=-1, scoring=make_scorer(balanced_accuracy_score), verbose=1)
     #fclf = fair_clf(sense_feats=sense_feats, reg=LinearRegression(), verbose=True)
     fclf.fit(X, y)
 
