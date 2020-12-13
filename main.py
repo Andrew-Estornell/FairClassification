@@ -5,6 +5,7 @@ import pandas as pd
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import GridSearchCV
 import itertools as itr
+from sklearn.metrics import balanced_accuracy_score, make_scorer
 
 #C=10
 #max_iter=100 (min 50)
@@ -48,9 +49,9 @@ if __name__ == "__main__":
     reg = GBR()
     GBC_params = {'max_depth':[3, 6, 10], 'n_estimators':[250,500]}
     
-    fclf = fair_clf(sense_feats=feat_combo, reg=regressor, gamma=gamma)
+    fclf = fair_clf(sense_feats=sense_feats, reg=regressor)
     reg_params = gen_param_grid(GBC_params)
-    fclf = GridSearchCV(fclf, reg_params, n_jobs=-1)
+    fclf = GridSearchCV(fclf, reg_params, n_jobs=-1, scoring=make_scorer(balanced_accuracy_score))
     #fclf = fair_clf(sense_feats=sense_feats, reg=LinearRegression(), verbose=True)
     fclf.fit(X, y)
 
