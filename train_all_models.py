@@ -16,6 +16,7 @@ from fair import model as fmodel
 from sklearn.model_selection import KFold
 import pandas as pd
 import numpy as np
+np.random.seed(42)
 
 def fair_clf(sense_feats=None, reg=GridSearchCV(GBR(),param_grid=GBC_params, n_jobs=-1), fairness='FP', C=10, gamma=0.01, max_iters=50, verbose=False):
     if sense_feats == None:
@@ -42,14 +43,14 @@ def get_sample_weight(df, key=['race']):
     if len(key) == 1:
         return minMax1D(compute_sample_weight('balanced',df[key[0]]))
     elif len(key)==2:
-        return minMax1D(compute_sample_weight('balanced',df[key[0]].astype(str) + df[[key[1]]].astype(str)))
+        return minMax1D(compute_sample_weight('balanced',df[key[0]].astype(str) + df[key[1]].astype(str)))
 
 def arr_to_string(arr):
     return 'AND'.join(arr)
 
 
-GBC_params = {'min_samples_split':[2, 3, 5], 'min_samples_leaf':[1,2,7], \
-                  'max_depth':[1,2,3,4], 'max_features':['auto','sqrt','log2'], 'n_estimators':[250,500]}
+GBC_params = {'min_samples_leaf':[1,2], \
+                  'max_depth':[1,2,3,4], 'n_estimators':[250,500]}
 
 DT_params = {'min_samples_split':[2, 3, 4, 5,6], 'min_samples_leaf':[1,2,3,4,5,7], \
                   'max_depth':[2,4,8,16,32], 'max_features':['auto','sqrt','log2']}
@@ -59,17 +60,17 @@ SVM_params = {'kernel':['linear', 'poly', 'rbf'], 'gamma':['scale','auto'],'prob
 SVR_params = {'kernel':['linear', 'poly', 'rbf'], 'gamma':['scale','auto'],'cache_size':[1024]}
 
 model_names = ['GB','Tree','SVM','LR']
-models = [GridSearchCV(GBC(), param_grid=GBC_params, n_jobs=-1),\
-          GridSearchCV(DecisionTreeClassifier(), param_grid=DT_params),\
-          GridSearchCV(SVC(), param_grid=SVM_params),\
+models = [GridSearchCV(GBC(), param_grid=GBC_params, n_jobs=-1, cv=5),\
+          GridSearchCV(DecisionTreeClassifier(), param_grid=DT_params, cv=5),\
+          GridSearchCV(SVC(), param_grid=SVM_params, cv=5),\
           LogisticRegression()
           ]
 
-base_fairer_regressors = [GridSearchCV(GBR(),param_grid=GBC_params, n_jobs=-1),\
-                          GridSearchCV(DecisionTreeRegressor(),param_grid=DT_params),\
-                          GridSearchCV(SVR(),param_grid=SVR_params),\
+base_fairer_regressors = [GridSearchCV(GBR(),param_grid=GBC_params, n_jobs=-1, cv=5),\
+                          GridSearchCV(DecisionTreeRegressor(),param_grid=DT_params, cv=5),\
+                          GridSearchCV(SVR(),param_grid=SVR_params, cv=5),\
                           LinearRegression() ]
-fair_gamma_opts = [0.2,0.1,0.01]
+fair_gamma_opts = [0.01]#[0.2,0.1,0.01]
 fairer_models = []
 fairer_model_names = []
 
