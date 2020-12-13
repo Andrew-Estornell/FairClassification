@@ -16,9 +16,14 @@ from fair import model as fmodel
 from sklearn.model_selection import KFold
 import pandas as pd
 import numpy as np
+from sklearn.model_selection import GridSearchCV
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import roc_auc_score
+
+
 np.random.seed(42)
 
-def fair_clf(sense_feats=None, reg=GridSearchCV(GBR(),param_grid=GBC_params, n_jobs=-1), fairness='FP', C=10, gamma=0.01, max_iters=50, verbose=False):
+def fair_clf(sense_feats=None, reg=LinearRegression(), fairness='FP', C=10, gamma=0.01, max_iters=50, verbose=False):
     if sense_feats == None:
         print("Fair model requires sensitive features.")
         exit(-1)
@@ -87,6 +92,7 @@ sens_feats_sets = [['race_is_ White', 'sex_is_ Male'],\
 models_dir = 'Models/'
 
 for dataset, label, cols_to_drop, sens_feats in zip(datasets, labels, cols_to_drop_sets, sens_feats_sets):
+    
     hasIndex = dataset in ['communities','lawschool2']
     if hasIndex:
         index_col = 0
@@ -122,7 +128,6 @@ for dataset, label, cols_to_drop, sens_feats in zip(datasets, labels, cols_to_dr
             with open(models_dir+'optimal_'+modelname+dataset+'split'+str(i)+'.pickle','wb') as handle:
                 pickle.dump(model, handle, pickle.HIGHEST_PROTOCOL)
             print(dataset, modelname, roc_auc_score(testY, model.predict(testX)))
-        
         for feat_combo in return_combo_arrs(sens_feats):
             '''naive fairness'''
             sample_weight = get_sample_weight(df.iloc[train_ind], feat_combo)
