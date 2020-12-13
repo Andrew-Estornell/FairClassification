@@ -19,9 +19,15 @@ import numpy as np
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score
+import itertools as itr
 
 
 np.random.seed(42)
+
+def gen_param_grid(param_grid):
+    keys = list(param_grid.keys())
+    combinations = [{keys[i]: combo[i] for i in range(len(combo))} for combo in list(itr.product(*(param_grid[key] for key in keys)))]
+    return {'predictor_param_dict': combinations}
 
 def fair_clf(sense_feats=None, reg=LinearRegression(), fairness='FP', C=10, gamma=0.01, max_iters=50, verbose=False):
     if sense_feats == None:
@@ -54,27 +60,33 @@ def arr_to_string(arr):
     return 'AND'.join(arr)
 
 
-GBC_params = {'min_samples_leaf':[1,2], \
-                  'max_depth':[1,2,3,4], 'n_estimators':[250,500]}
+GBC_params = {'max_depth':[3, 6, 10], 'n_estimators':[250,500]}
 
-DT_params = {'min_samples_split':[2, 3, 4, 5,6], 'min_samples_leaf':[1,2,3,4,5,7], \
-                  'max_depth':[2,4,8,16,32], 'max_features':['auto','sqrt','log2']}
+#DT_params = {'min_samples_split':[2, 3, 4, 5,6], 'min_samples_leaf':[1,2,3,4,5,7], \
+#                  'max_depth':[2,4,8,16,32], 'max_features':['auto','sqrt','log2']}
 
-SVM_params = {'kernel':['linear', 'poly', 'rbf'], 'gamma':['scale','auto'],'probability':[True],'cache_size':[1024]}
+SVM_params = {'kernel':['linear', 'poly', 'rbf'], 'gamma':['scale','auto'],'cache_size':[1024]}
 
-SVR_params = {'kernel':['linear', 'poly', 'rbf'], 'gamma':['scale','auto'],'cache_size':[1024]}
+log_params = {'max_iters'}
+#SVR_params = {'kernel':['linear', 'poly', 'rbf'], 'gamma':['scale','auto'],'cache_size':[1024]}
 
-model_names = ['GB','Tree','SVM','LR']
-models = [GridSearchCV(GBC(), param_grid=GBC_params, n_jobs=-1, cv=5),\
-          GridSearchCV(DecisionTreeClassifier(), param_grid=DT_params, cv=5),\
-          GridSearchCV(SVC(), param_grid=SVM_params, cv=5),\
+mld_params = {'GB': GBC_params, 'SVM': SVM_params, 'LR': {'fit_intercept':[True]}}
+
+model_names = ['GB','SVM','LR']
+
+
+n_jobs=-1
+models = [GridSearchCV(GBC(), param_grid=GBC_params, n_jobs=n_jobs, cv=5),\
+          #GridSearchCV(DecisionTreeClassifier(), param_grid=DT_params, cv=5),\
+          GridSearchCV(SVC(probability=True), param_grid=SVM_params, n_jobs=n_jobs, cv=5),\
           LogisticRegression()
           ]
 
-base_fairer_regressors = [GridSearchCV(GBR(),param_grid=GBC_params, n_jobs=-1, cv=5),\
-                          GridSearchCV(DecisionTreeRegressor(),param_grid=DT_params, cv=5),\
-                          GridSearchCV(SVR(),param_grid=SVR_params, cv=5),\
-                          LinearRegression() ]
+#base_fairer_regressors = [GridSearchCV(GBR(), param_grid=GBC_params, n_jobs=-1, cv=5),\
+#                          GridSearchCV(DecisionTreeRegressor(),param_grid=DT_params, cv=5),\
+#                          GridSearchCV(SVR(),param_grid=SVR_params, cv=5),\
+#                          LinearRegression() ]
+base_fairer_regressors = [GBR(), SVR(), LinearRegression()]
 fair_gamma_opts = [0.01]#[0.2,0.1,0.01]
 fairer_models = []
 fairer_model_names = []
@@ -128,6 +140,7 @@ for dataset, label, cols_to_drop, sens_feats in zip(datasets, labels, cols_to_dr
             with open(models_dir+'optimal_'+modelname+dataset+'split'+str(i)+'.pickle','wb') as handle:
                 pickle.dump(model, handle, pickle.HIGHEST_PROTOCOL)
             print(dataset, modelname, roc_auc_score(testY, model.predict(testX)))
+
         for feat_combo in return_combo_arrs(sens_feats):
             '''naive fairness'''
             sample_weight = get_sample_weight(df.iloc[train_ind], feat_combo)
@@ -136,10 +149,16 @@ for dataset, label, cols_to_drop, sens_feats in zip(datasets, labels, cols_to_dr
                 with open(models_dir+arr_to_string(feat_combo)+'_'+modelname+dataset+'split'+str(i)+'.pickle','wb') as handle:
                     pickle.dump(model, handle, pickle.HIGHEST_PROTOCOL)
                 print(dataset, modelname, arr_to_string(feat_combo), roc_auc_score(testY, model.predict(testX)))
+
             '''better fairness'''
             for gamma in fair_gamma_opts:
                 for regressor, modelname in zip(base_fairer_regressors, model_names):
                     model = fair_clf(sense_feats=feat_combo, reg=regressor, gamma=gamma)
+                    reg_params = gen_param_grid(mld_params[modelname])
+                    model = GridSearchCV(model, reg_params, n_jobs=n_jobs)
+
+
+
                     fair_trainX = pd.DataFrame(scaler.transform(df.iloc[train_ind].drop([label],axis=1).values), columns=df.iloc[train_ind].drop([label],axis=1).columns)
                     fair_testX = pd.DataFrame(scaler.transform(df.iloc[test_ind].drop([label],axis=1).values), columns=df.iloc[test_ind].drop([label],axis=1).columns)
                     model.fit(fair_trainX,df.iloc[train_ind][label])
