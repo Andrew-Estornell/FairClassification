@@ -36,8 +36,8 @@ class Learner:
         ds = np.add(ds, new_preds)
 
 
-        #error = np.mean([np.abs(ds[k] - self.y[self.y.index[k]]) for k in range(len(self.y))])
-        ys = np.array([self.y[self.y.index[k]] for k in range(len(self.y))])
-        error = 1 - roc_auc_score(ys, ds)
+        error = np.mean([np.abs(ds[k] - self.y[self.y.index[k]]) for k in range(len(self.y))])
+        #ys = np.array([self.y[self.y.index[k]] for k in range(len(self.y))])
+        #error = 1 - roc_auc_score(ys, ds)
 
         return (error, ds)

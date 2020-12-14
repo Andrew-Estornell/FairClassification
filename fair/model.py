@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 class Model:
     """Model object for fair learning and classification"""
 
-    def fictitious_play(self, X, X_prime, y, early_termination=True):
+    def fictitious_play(self, X, X_prime, y, early_termination=False):
         """
         Fictitious Play Algorithm
         Input: dataset cleaned into X, X_prime, y

@@ -21,7 +21,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score
 import itertools as itr
 from sklearn.metrics import balanced_accuracy_score, make_scorer
-
+import copy as copy
 
 
 np.random.seed(42)
@@ -144,8 +144,8 @@ for dataset, label, cols_to_drop, sens_feats in zip(datasets, labels, cols_to_dr
         dataset_saveData['split'+str(i)] = {}
         #with open(models_dir+'scaler_split'+str(i)+'.pickle','wb') as handle:
                 #pickle.dump(scaler, handle, pickle.HIGHEST_PROTOCOL)
-        dataset_saveData['split'+str(i)]['scaler'] = scaler
-        dataset_saveData['split'+str(i)]['test_data'] = df.iloc[test_ind].copy()
+        #dataset_saveData['split'+str(i)]['scaler'] = scaler
+        dataset_saveData['split'+str(i)]['test_data'] = (copy.deepcopy(testX), copy.deepcopy(testY))#df.iloc[test_ind].copy()
         dataset_saveData['split'+str(i)]['models'] = {}
         
         df.iloc[test_ind].to_csv(models_dir+'test_dataframe_'+dataset+'split'+str(i)+'.csv')
@@ -170,7 +170,7 @@ for dataset, label, cols_to_drop, sens_feats in zip(datasets, labels, cols_to_dr
             '''better fairness'''
             for gamma in fair_gamma_opts:
                 for regressor, modelname in zip(base_fairer_regressors, model_names):
-                    model = fair_clf(sense_feats=feat_combo, reg=regressor, gamma=gamma)
+                    model = fair_clf(sense_feats=feat_combo, reg=copy.deepcopy(regressor), gamma=gamma)
                     reg_params = gen_param_grid(mld_params[modelname])
                     model = GridSearchCV(model, reg_params, n_jobs=n_jobs, scoring=make_scorer(balanced_accuracy_score), cv=5)
 
