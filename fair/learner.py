@@ -2,6 +2,7 @@ import numpy as np
 import copy
 from sklearn import linear_model
 from fair.reg_oracle_class import RegOracle
+from sklearn.metrics import roc_auc_score
 
 import random as rand
 
@@ -13,6 +14,7 @@ class Learner:
 
     def best_response(self, costs_0, costs_1):
         """Solve the CSC problem for the learner."""
+        #print(len(np.unique(costs_0)), len(np.unique(costs_1)))
         reg0 = copy.deepcopy(self.predictor)
         reg0.fit(self.X, costs_0)
         reg1 = copy.deepcopy(self.predictor)
@@ -34,6 +36,8 @@ class Learner:
         ds = np.add(ds, new_preds)
 
 
-        error = np.mean([np.abs(ds[k] - self.y[self.y.index[k]]) for k in range(len(self.y))])
+        #error = np.mean([np.abs(ds[k] - self.y[self.y.index[k]]) for k in range(len(self.y))])
+        ys = np.array([self.y[self.y.index[k]] for k in range(len(self.y))])
+        error = 1 - roc_auc_score(ys, ds)
 
         return (error, ds)
