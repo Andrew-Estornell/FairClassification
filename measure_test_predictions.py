@@ -50,7 +50,11 @@ def get_eval_stats(dataframe, sense_feats=['is_White','gender'], label='income')
 def arr_to_string(arr):
     return 'AND'.join(arr)
 
-
+def return_combo_arrs(arr):
+    if len(arr) == 1:
+        return [arr]
+    elif len(arr) == 2:
+        return [[arr[0]],[arr[1]],arr]
 
 model_names = ['GB','SVM','LR']
 
