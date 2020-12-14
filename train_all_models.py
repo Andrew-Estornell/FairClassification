@@ -20,6 +20,8 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score
 import itertools as itr
+from sklearn.metrics import balanced_accuracy_score, make_scorer
+
 
 
 np.random.seed(42)
@@ -48,7 +50,10 @@ def return_combo_arrs(arr):
         return [[arr[0]],[arr[1]],arr]
        
 def minMax1D(arr):
-    return ((arr-arr.min())/(arr.max()-arr.min()))
+    if np.unique(arr).shape[0]==1:
+        return np.ones(arr.shape[0])
+    else:
+        return ((arr-arr.min())/(arr.max()-arr.min()))
 
 def get_sample_weight(df, key=['race']):
     if len(key) == 1:
@@ -104,6 +109,9 @@ sens_feats_sets = [['race_is_ White', 'sex_is_ Male'],\
 models_dir = 'Models/'
 
 for dataset, label, cols_to_drop, sens_feats in zip(datasets, labels, cols_to_drop_sets, sens_feats_sets):
+    #if dataset in ['adult','Data_1980','lawschool2']:
+        #continue
+    print(dataset)
     
     hasIndex = dataset in ['communities','lawschool2']
     if hasIndex:
@@ -164,7 +172,7 @@ for dataset, label, cols_to_drop, sens_feats in zip(datasets, labels, cols_to_dr
                 for regressor, modelname in zip(base_fairer_regressors, model_names):
                     model = fair_clf(sense_feats=feat_combo, reg=regressor, gamma=gamma)
                     reg_params = gen_param_grid(mld_params[modelname])
-                    model = GridSearchCV(model, reg_params, n_jobs=n_jobs)
+                    model = GridSearchCV(model, reg_params, n_jobs=n_jobs, scoring=make_scorer(balanced_accuracy_score), cv=5)
 
 
 
@@ -176,8 +184,8 @@ for dataset, label, cols_to_drop, sens_feats in zip(datasets, labels, cols_to_dr
                     dataset_saveData['split'+str(i)]['models'][arr_to_string(feat_combo)+'_betterFairness_gamma'+str(gamma)+modelname] = model
                     arr_to_string(feat_combo)+'_'+modelname
                     print(dataset, modelname, 'better', arr_to_string(feat_combo), roc_auc_score(testY, model.predict(df.iloc[test_ind].drop([label],axis=1))))
-        with open(models_dir+dataset+'_trainedModelInfo.pickle', 'wb') as handle:
-            pickle.dump(dataset_saveData, handle, pickle.HIGHEST_PROTOCOL)
+    with open(models_dir+dataset+'_trainedModelInfo.pickle', 'wb') as handle:
+        pickle.dump(dataset_saveData, handle, pickle.HIGHEST_PROTOCOL)
                 
             
             
