@@ -9,6 +9,8 @@ from sklearn.metrics import roc_auc_score
 import pickle
 import pandas as pd
 import numpy as np
+from scipy.stats import chisquare
+from statsmodels.stats.proportion import proportions_ztest
 
 
 def getFPR(dataframe, label='income'):
@@ -99,19 +101,45 @@ for dataset, label, cols_to_drop, sens_feats in zip(datasets, labels, cols_to_dr
         
         print(dataset, modelname, get_eval_stats(pd.concat(dfs), sens_feats, label))
         
-        
+    '''naive fair models'''    
     for feat_combo in return_combo_arrs(sens_feats):
         for modelname in model_names:
+            dfs = []
             for i in range(1,6):
                 naivefair_model = all_model_data['split1']['models'][arr_to_string(feat_combo)+'_'+modelname]
-        
+                testX = scalers[i].transform(test_data[i].drop([label],axis=1).values)
+                testY = test_data[i][label].values
+                
+                pred = naivefair_model.predict(testX)
+                eval_df = test_data[i].copy()
+                eval_df['pred'] = pred
+                eval_df['p_prob'] = naivefair_model.predict_proba(testX)[:,1]
+                dfs.append(eval_df.copy())
+        '''better fair models'''
         for modelname in model_names:
-            for i in range(1,6):
-                for gamma in fair_gamma_opts:
+            for gamma in fair_gamma_opts:
+                dfs = []
+                for i in range(1,6):
                     betterfair_model = all_model_data['split1']['models'][arr_to_string(feat_combo)+'_betterFairness_gamma'+str(gamma)+modelname]
-        #fair_testX = pd.DataFrame(testX, columns=test_data[i].drop([label],axis=1).columns)
-        #fair_testY = test_data[i][label]
+                    testX = scalers[i].transform(test_data[i].drop([label],axis=1).values)
+                    fair_testX = pd.DataFrame(testX, columns=test_data[i].drop([label],axis=1).columns)
+                    fair_testY = test_data[i][label]
+                    pred = betterfair_model.predict(fair_testX)
+                    eval_df = test_data[i].copy()
+                    eval_df['pred'] = pred
+                    eval_df['p_prob'] = betterfair_model.predict_proba(fair_testX)[:,1]
+                    dfs.append(eval_df.copy())
+                print(dataset, modelname, get_eval_stats(pd.concat(dfs), sens_feats, label))
+                    
             
             
     
+'''
+if len(combo_arrs) == 1:   
+    FP = (~df[label] & df.pred).values
     
+    fp_counts = []
+    pop_sizes = []
+    
+    print(proportions_ztest(fp_counts, pop_sizes))
+'''
