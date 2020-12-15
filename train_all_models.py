@@ -79,6 +79,9 @@ mld_params = {'GB': GBC_params, 'SVM': SVM_params, 'LR': {'fit_intercept':[True]
 
 model_names = ['GB','SVM','LR']
 
+reg_names = ['GB', 'DT', 'LR']
+DT_params = {'max_depth': [2, 5, 10], 'max_features': [2, 4]}
+reg_params_ = {'GB': GBC_params, 'DT': DT_params, 'LR': {'fit_intercept':[True]}}
 
 n_jobs=-1
 models = [GridSearchCV(GBC(), param_grid=GBC_params, n_jobs=n_jobs, cv=5),\
@@ -91,7 +94,7 @@ models = [GridSearchCV(GBC(), param_grid=GBC_params, n_jobs=n_jobs, cv=5),\
 #                          GridSearchCV(DecisionTreeRegressor(),param_grid=DT_params, cv=5),\
 #                          GridSearchCV(SVR(),param_grid=SVR_params, cv=5),\
 #                          LinearRegression() ]
-base_fairer_regressors = [GBR(), SVR(), LinearRegression()]
+base_fairer_regressors = [GBR(), DecisionTreeRegressor(), LinearRegression()]
 fair_gamma_opts = [0.2,0.1,0.01]
 fairer_models = []
 fairer_model_names = []
@@ -167,11 +170,11 @@ for dataset, label, cols_to_drop, sens_feats in zip(datasets, labels, cols_to_dr
                 dataset_saveData['split'+str(i)]['models'][arr_to_string(feat_combo)+'_'+modelname] = model
                 print(dataset, modelname, arr_to_string(feat_combo), roc_auc_score(testY, model.predict(testX)))
 
-            '''better fairness'''
+            print('better fairness')
             for gamma in fair_gamma_opts:
-                for regressor, modelname in zip(base_fairer_regressors, model_names):
-                    model = fair_clf(sense_feats=feat_combo, reg=copy.deepcopy(regressor), gamma=gamma)
-                    reg_params = gen_param_grid(mld_params[modelname])
+                for regressor, modelname in zip(base_fairer_regressors, reg_names):
+                    model = fair_clf(sense_feats=feat_combo, reg=copy.deepcopy(regressor), gamma=gamma)#, verbose=True)
+                    reg_params = gen_param_grid(reg_params_[modelname])
                     model = GridSearchCV(model, reg_params, n_jobs=n_jobs, scoring=make_scorer(balanced_accuracy_score), cv=5)
 
 
@@ -183,7 +186,8 @@ for dataset, label, cols_to_drop, sens_feats in zip(datasets, labels, cols_to_dr
                         #pickle.dump(model, handle, pickle.HIGHEST_PROTOCOL)
                     dataset_saveData['split'+str(i)]['models'][arr_to_string(feat_combo)+'_betterFairness_gamma'+str(gamma)+modelname] = model
                     arr_to_string(feat_combo)+'_'+modelname
-                    print(dataset, modelname, 'better', arr_to_string(feat_combo), roc_auc_score(testY, model.predict(df.iloc[test_ind].drop([label],axis=1))))
+                    print('test ', dataset, modelname, 'better', arr_to_string(feat_combo), roc_auc_score(testY, model.predict_proba(fair_testX)[:,1]))
+                    print('train', dataset, modelname, 'better', arr_to_string(feat_combo), roc_auc_score(trainY, model.predict_proba(fair_trainX)[:,1]))
     with open(models_dir+dataset+'_trainedModelInfo.pickle', 'wb') as handle:
         pickle.dump(dataset_saveData, handle, pickle.HIGHEST_PROTOCOL)
                 
