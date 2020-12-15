@@ -73,9 +73,9 @@ f_save_names = ['recidivism',
 				'lawschool',
 				'student']
 
-models_dict = pickle.load(open('FairClassification/Experiment/GBC_models.pickle','rb'))
+models_dict = pickle.load(open('Experiment/GBC_models.pickle','rb'))
 
-df = pd.read_csv('FairClassification/Experiment/processed_data_with_validation_key.csv')
+df = pd.read_csv('Experiment/processed_data_with_validation_key.csv')
 valid_df = df[df.isValidation].copy()
 discrete_cols = ['workclass','education','marital-status','occupation','relationship','race','native-country']
 valid_df.drop(discrete_cols+['income','isValidation'],axis=1, inplace=True)
@@ -99,9 +99,9 @@ for file_name, target_column, cols_to_remove, variables_to_be_made_binary, sensa
         # Check training performance
         pred_p = fclf.predict_proba(X_test)[:,1]
 
-        print("pred_p :", fclf.predict_proba(X_test)[:,1])
-        print(len(fclf.predict_proba(X_test)[:,1]))
-        print("train AUC:", roc_auc_score(y_test, pred_p))
+        # print("pred_p :", fclf.predict_proba(X_test)[:,1])
+        # print(len(fclf.predict_proba(X_test)[:,1]))
+        # print("train AUC:", roc_auc_score(y_test, pred_p))
 
 
         # measure the utility gain of lying for 1 agent. So, each of the rows/agents will get a new probability
@@ -116,7 +116,7 @@ for file_name, target_column, cols_to_remove, variables_to_be_made_binary, sensa
 
             pred_p_lied = fclf.predict_proba(X_test)[:, 1]
 
-            print("pred_p lied about : " + feature, fclf.predict_proba(X_test)[:, 1])
+            # print("pred_p lied about : " + feature, fclf.predict_proba(X_test)[:, 1])
             print("train AUC lied about : " + feature, roc_auc_score(y_test, pred_p))
             vector_diff = pred_p - pred_p_lied
             print("avg utility (defined as probability to get 1) difference ", vector_diff.mean())
