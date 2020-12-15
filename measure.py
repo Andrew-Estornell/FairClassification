@@ -152,6 +152,7 @@ for file_name, target_column, cols_to_remove, variables_to_be_made_binary, sensa
                            joey_lied_fair_race_proba_list.append(this_row_lied_proba)
                            row[col] = 1
                            row[col_other] = 0
+                           break
                 vector_diff = arr = np.array(joey_fair_race_proba_list) - np.array(joey_lied_fair_race_proba_list)
                 print("avg utility (defined as probability to get 1) difference ", vector_diff.mean())
                 l1_original = norm(np.array(joey_fair_race_proba_list), 1)
