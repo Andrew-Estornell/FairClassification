@@ -148,7 +148,7 @@ for dataset, label, cols_to_drop, sens_feats in zip(datasets, labels, cols_to_dr
         #with open(models_dir+'scaler_split'+str(i)+'.pickle','wb') as handle:
                 #pickle.dump(scaler, handle, pickle.HIGHEST_PROTOCOL)
         #dataset_saveData['split'+str(i)]['scaler'] = scaler
-        dataset_saveData['split'+str(i)]['test_data'] = (copy.deepcopy(testX), copy.deepcopy(testY))#df.iloc[test_ind].copy()
+        dataset_saveData['split'+str(i)]['test_data'] = (copy.deepcopy(testX), copy.deepcopy(testY), df.columns)#df.iloc[test_ind].copy()
         dataset_saveData['split'+str(i)]['models'] = {}
         
         df.iloc[test_ind].to_csv(models_dir+'test_dataframe_'+dataset+'split'+str(i)+'.csv')
