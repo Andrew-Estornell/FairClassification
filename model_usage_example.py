@@ -1,16 +1,32 @@
-
-from sklearn.model_selection import GridSearchCV
-from sklearn.linear_model import LogisticRegression
 import pickle as pkl
+from sklearn.metrics import balanced_accuracy_score, roc_auc_score, accuracy_score
+import numpy as np
 
-for name in ['Models/adult_trainedModelInfo', 'Models/Data_1980_trainedModelInfo', 'Models/student-mat_trainedModelInfo', 'Models/lawschool2_trainedModelInfo']:
-    print(name)
-    d = pkl.load(open(name+'.pickle', 'rb'))
+if __name__=='__main__':
+    d = pkl.load(open('Models/adult_trainedModelInfo(1).pickle', 'rb'))
 
+    # iterate over each of the 5 data splits
     for split in d.keys():
-        d[split]['models'] = {clf_name: clf for clf_name, clf in d[split]['models'].items() if ('gamma' in clf_name and 'GB' not in clf_name) or 'gamma' not in clf_name}
-        print(d[split]['models'].keys())
+        print(split)
 
-    with open(name+'(1).pickle', 'wb') as handle:
-        pkl.dump(d, handle, protocol=pkl.HIGHEST_PROTOCOL)
+        # pull data and models
+        # columns represent the original columns of the data frame (after one-hot-encoding)
+        X, y, columns = d[split]['test_data']
+        clfs = d[split]['models']
+
+        # test model function
+        for clf_name, clf in clfs.items():
+            pred, pred_p = clf.predict(X), clf.predict_proba(X)[:,1]
+
+            bla = balanced_accuracy_score(y, pred)
+            acc = accuracy_score(y, pred)
+            auc = roc_auc_score(y, pred_p)
+
+            print('   ', clf_name, 'bla: ', np.round(bla, 2), 'acc: ', np.round(acc, 2), 'auc: ', np.round(auc, 2))
+
+
+
+
+
+
 
