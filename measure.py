@@ -61,6 +61,49 @@ def prep(file_name, target_col, remove_cols, rev, bin_vals=None):
 
     return df, target
 
+option_values = {
+  "race":['White','Black'],
+  "sex": ['Male','Female'],
+  "both": ['White','Black','Male','Female'],
+  "none": ['White','Black','Male','Female'],
+}
+
+def not_lie_and_lie_test_joey(options):
+    valid_df = df[df.isValidation].copy()
+    discrete_cols = ['workclass', 'education', 'marital-status', 'occupation', 'relationship', 'option',
+                     'native-country']
+    valid_df.drop(discrete_cols + ['income', 'isValidation'], axis=1, inplace=True)
+
+    joey_fair_option_proba_list = []
+    joey_lied_fair_option_proba_list = []
+    for index, row in valid_df.iterrows():
+        for option in options:
+            this_row_proba = models_dict[option].best_estimator_.predict_proba(row.values.reshape(1, -1))[:, 1]
+            joey_fair_option_proba_list.append(this_row_proba)
+            option_cols = [col for col in valid_df.columns if option in col]
+            for col in option_cols:
+                if row[col] == 1:
+                    row[col] = 0
+                    col_other = ''
+                    for col1 in option_cols:
+                        if col != col1 and ('White' in col1 or 'Black' in col1):
+                            col_other = col1
+                            row[col_other] = 1
+                    this_row_lied_proba = models_dict['option'].best_estimator_.predict_proba(
+                        row.values.reshape(1, -1))[:, 1]
+                    joey_lied_fair_option_proba_list.append(this_row_lied_proba)
+                    row[col] = 1
+                    row[col_other] = 0
+        vector_diff = arr = np.array(joey_fair_option_proba_list) - np.array(joey_lied_fair_option_proba_list)
+        print("avg utility (defined as probability to get 1) difference ", vector_diff.mean())
+        l1_original = norm(np.array(joey_fair_option_proba_list), 1)
+        l1_lied = norm(np.array(joey_lied_fair_option_proba_list), 1)
+        print("l1 norm difference:", l1_original - l1_lied)
+
+def not_lie_and_lie_test_andrew(features):
+    pass
+
+
 info    = [('data/Data_1980.csv',            'RECID',               ['TIME','FILE'], {},                                       ['WHITE'],       1),
 		 ('data/adult.csv',                            'income',              [],              {'race': (' White', ' Black')},           ['race'],        0),
 		 ('data/communities.csv',                      'ViolentCrimesPerPop', [],              {},                                       ['race'],        1),
@@ -73,47 +116,91 @@ f_save_names = ['recidivism',
 				'lawschool',
 				'student']
 
+models_dict = pickle.load(open('Experiment/GBC_models.pickle','rb'))
+
+df = pd.read_csv('Experiment/processed_data_with_validation_key.csv')
+
+print(models_dict.keys())
+
 
 for file_name, target_column, cols_to_remove, variables_to_be_made_binary, sensative_features, flip_0_and_1_labes in info:
-    X, y = prep(file_name,  target_column, cols_to_remove, flip_0_and_1_labes, bin_vals=variables_to_be_made_binary)
-    # print(X,y)
-
     if file_name == 'data/adult.csv':
-        # Learn fair classifier
-        sense_feats = ['race']
-        fclf = fair_clf(sense_feats=sense_feats, verbose=True, gamma=0.0000001, max_iters=20)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 42)
-        fclf.fit(X_train, y_train)
+        features = ['race','sex','both','none']
+        for feature in features:
+            if feature == 'race':
+                # Joey fair race model
+                valid_df = df[df.isValidation].copy()
+                discrete_cols = ['workclass', 'education', 'marital-status', 'occupation', 'relationship', 'race',
+                                 'native-country']
+                valid_df.drop(discrete_cols + ['income', 'isValidation'], axis=1, inplace=True)
+                
+                joey_fair_race_proba_list = []
+                joey_lied_fair_race_proba_list = []
+                for index, row in valid_df.iterrows():
+                    this_row_proba = models_dict['race'].best_estimator_.predict_proba(row.values.reshape(1, -1))[:, 1]
+                    joey_fair_race_proba_list.append(this_row_proba)
+                    race_cols = [col for col in valid_df.columns if 'race' in col]
+                    for col in race_cols:
+                       if row[col] == 1:
+                           row[col] = 0
+                           col_other = ''
+                           for col1 in race_cols:
+                               if col != col1 and ('White' in col1 or 'Black' in col1):
+                                   col_other = col1
+                                   row[col_other] = 1
+                           this_row_lied_proba = models_dict['race'].best_estimator_.predict_proba(row.values.reshape(1, -1))[:, 1]
+                           joey_lied_fair_race_proba_list.append(this_row_lied_proba)
+                           row[col] = 1
+                           row[col_other] = 0
+                vector_diff = arr = np.array(joey_fair_race_proba_list) - np.array(joey_lied_fair_race_proba_list)
+                print("avg utility (defined as probability to get 1) difference ", vector_diff.mean())
+                l1_original = norm(np.array(joey_fair_race_proba_list), 1)
+                l1_lied = norm(np.array(joey_lied_fair_race_proba_list), 1)
+                print("l1 norm difference:", l1_original - l1_lied)
 
 
-        # Check training performance
-        pred_p = fclf.predict_proba(X_test)[:,1]
+                # Andrew fair race model
+                X, y = prep(file_name, target_column, cols_to_remove, flip_0_and_1_labes,
+                            bin_vals=variables_to_be_made_binary)
+                sense_feats = ['race']
+                fclf = fair_clf(sense_feats=sense_feats, verbose=True, gamma=0.0000001, max_iters=20)
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+                fclf.fit(X_train, y_train)
 
-        # how to get the probability of say, row 37 get assigned label 1 ? #
-        print("pred_p :", fclf.predict_proba(X_test)[:,1])
-        print(len(fclf.predict_proba(X_test)[:,1]))
-        print("train AUC:", roc_auc_score(y_test, pred_p))
+                pred_p = fclf.predict_proba(X_test)[:, 1]
+
+                X[feature].replace({1: 0, 0: 1}, inplace=True)
+                fclf = fair_clf(sense_feats=sense_feats, verbose=True, gamma=0.0000001, max_iters=20)
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+                fclf.fit(X_train, y_train)
+
+                pred_p_lied = fclf.predict_proba(X_test)[:, 1]
+
+                # print("train AUC lied about : " + feature, roc_auc_score(y_test, pred_p))
+                vector_diff = pred_p - pred_p_lied
+                print("avg utility (defined as probability to get 1) difference ", vector_diff.mean())
+                l1_original = norm(pred_p, 1)
+                l1_lied = norm(pred_p_lied, 1)
+                print("l1 norm difference:", l1_original - l1_lied)
+
+                pass
+            elif feature == 'sex':
+                # Joey fair sex model
+
+                # Andrew fair sex model
+                pass
+            elif feature == 'both':
+                # Joey fair both sex and race model
+
+                # Andrew fair both sex and race model
+                pass
+            elif feature == 'none':
+                # Joey base model
+
+                pass
 
 
-        # measure the utility gain of lying for 1 agent. So, each of the rows/agents will get a new probability
-        # after lying. What I do is to get an avg-ed probability gain or loss across the column
-        # 4 different lies (sex, race ....) generate different combinations of dataframes to be fed into it
-        features_to_lie_about = ['race']
-        for feature in features_to_lie_about:
-            X[feature].replace({1: 0, 0: 1}, inplace=True)
-            fclf = fair_clf(sense_feats=sense_feats, verbose=True, gamma=0.0000001, max_iters=20)
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-            fclf.fit(X_train, y_train)
 
-            pred_p_lied = fclf.predict_proba(X_test)[:, 1]
-
-            print("pred_p lied about : " + feature, fclf.predict_proba(X_test)[:, 1])
-            print("train AUC lied about : " + feature, roc_auc_score(y_test, pred_p))
-            vector_diff = pred_p - pred_p_lied
-            print("avg utility (defined as probability to get 1) difference ", vector_diff.mean())
-            l1_original = norm(pred_p, 1)
-            l1_lied = norm(pred_p_lied,1)
-            print("l1 norm difference:", l1_original-l1_lied)
 
 
 
