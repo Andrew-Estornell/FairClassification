@@ -130,6 +130,7 @@ for dataset, label, cols_to_drop, sens_feats in zip(datasets, labels, cols_to_dr
     df = process_categorical(df, discrete_cols)
     X = df.drop([label],axis=1).values
     Y = df[label].values
+    print(X.shape)
     kf = KFold(n_splits=5)
     i = 0
     for train_ind, test_ind in kf.split(X,Y):
