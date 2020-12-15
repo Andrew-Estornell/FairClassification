@@ -73,6 +73,16 @@ f_save_names = ['recidivism',
 				'lawschool',
 				'student']
 
+models_dict = pickle.load(open('FairClassification/Experiment/GBC_models.pickle','rb'))
+
+df = pd.read_csv('FairClassification/Experiment/processed_data_with_validation_key.csv')
+valid_df = df[df.isValidation].copy()
+discrete_cols = ['workclass','education','marital-status','occupation','relationship','race','native-country']
+valid_df.drop(discrete_cols+['income','isValidation'],axis=1, inplace=True)
+
+fair_by_race_model = models_dict['race'].best_estimator_
+print(fair_by_race_model)
+
 
 for file_name, target_column, cols_to_remove, variables_to_be_made_binary, sensative_features, flip_0_and_1_labes in info:
     X, y = prep(file_name,  target_column, cols_to_remove, flip_0_and_1_labes, bin_vals=variables_to_be_made_binary)
@@ -89,7 +99,6 @@ for file_name, target_column, cols_to_remove, variables_to_be_made_binary, sensa
         # Check training performance
         pred_p = fclf.predict_proba(X_test)[:,1]
 
-        # how to get the probability of say, row 37 get assigned label 1 ? #
         print("pred_p :", fclf.predict_proba(X_test)[:,1])
         print(len(fclf.predict_proba(X_test)[:,1]))
         print("train AUC:", roc_auc_score(y_test, pred_p))
