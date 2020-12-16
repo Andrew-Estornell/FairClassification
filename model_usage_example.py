@@ -38,7 +38,7 @@ if __name__=='__main__':
 
         print(f_name)
         for clf_name, score in avg_scores.items():
-            print('   ', clf_name, 'auc: ', np.round(score[0], 2), 'bla: ', np.round(score[1], 2), 'acc: ', np.round(score[2], 2))
+            print('   ', clf_name, 'auc: ', np.round(score[0]/float(len(d)), 2), 'bla: ', np.round(score[1]/float(len(d)), 2), 'acc: ', np.round(score[2]/float(len(d)), 2))
         print()
 
 
