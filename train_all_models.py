@@ -26,10 +26,12 @@ import copy as copy
 
 np.random.seed(42)
 
+
 def gen_param_grid(param_grid):
     keys = list(param_grid.keys())
     combinations = [{keys[i]: combo[i] for i in range(len(combo))} for combo in list(itr.product(*(param_grid[key] for key in keys)))]
     return {'predictor_param_dict': combinations}
+
 
 def fair_clf(sense_feats=None, reg=LinearRegression(), fairness='FP', C=10, gamma=0.01, max_iters=50, verbose=False):
     if sense_feats == None:
@@ -82,6 +84,15 @@ model_names = ['GB','SVM','LR']
 reg_names = ['GB', 'DT', 'LR']
 DT_params = {'max_depth': [2, 5, 10], 'max_features': [2, 4]}
 reg_params_ = {'GB': GBC_params, 'DT': DT_params, 'LR': {'fit_intercept':[True]}}
+
+
+
+
+
+
+
+
+
 
 n_jobs=-1
 models = [GridSearchCV(GBC(), param_grid=GBC_params, n_jobs=n_jobs, cv=5),\
