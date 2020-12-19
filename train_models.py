@@ -22,17 +22,17 @@ def gen_param_grid(param_grid):
 def gen_sample_weights(data, feat):
     g1_size = sum(data[feat])
     g2_size = len(data) - g1_size
-    weights = np.array([1.0/g1_size if data[feat][i] == 1 else 1.0/g2_size for i in range(len(data))])
+    weights = np.array([1.0/g1_size if data[feat].iloc[i] == 1 else 1.0/g2_size for i in range(len(data))])
     return weights
 
 
 if __name__ == '__main__':
     np.random.seed(101)
 
-    info = [('data/Data_1980.csv',   'RECID',  ['TIME','FILE'], {},                             ['WHITE'], 1),
-            ('data/adult.csv',       'income', [],              {'race': (' White', ' Black')}, ['race'],  0),
-            ('data/lawschool2.csv',  'bar1',   ['cluster'],     {},                             ['race'],  0),
-            ('data/student-mat.csv', 'G3',     [],              {},                             ['sex'],   0)]
+    info = [('data/Data_1980.csv',   'RECID',  ['TIME', 'FILE'],    {},                                                          ['WHITE'], 1),
+            ('data/adult.csv',       'income', ['native-country'],  {'race': (' White', ' Black'), 'sex': (' Male', ' Female')}, ['race'],  0),
+            ('data/lawschool2.csv',  'bar1',   ['cluster'],         {},                                                          ['race'],  0),
+            ('data/student-mat.csv', 'G3',     [],                  {'sex': ('M', 'F'), 'school': ('GP', 'MS'), 'address': ('U', 'R'), 'famsize': ('GT3', 'LE3'), 'Pstatus': ('A', 'T'), 'schoolsup': ('yes', 'no'), 'famsup': ('yes', 'no'), 'paid': ('yes', 'no'), 'activities': ('yes', 'no'), 'nursery': ('yes', 'no'), 'higher': ('yes', 'no'), 'internet': ('yes', 'no'), 'romantic': ('yes', 'no')},  ['sex'],   0)]
 
     f_save_names = ['recidivism', 'adult', 'lawschool', 'student']
 
@@ -42,17 +42,29 @@ if __name__ == '__main__':
     k = 5
 
     base_params = {'GB': {'max_depth':    [2, 5, 10],
-                          'n_estimators': [50*i + 50 for i in range(10)]},
+                          'n_estimators': [75*i + 50 for i in range(5)]},
                    'SV': {'kernel': ['linear', 'poly', 'rbf'],
                           'C':      [10, 1, 0.1, 0.01]},
-                   'LG': {'max_iters': [200, 500, 100],
-                          'C':         [10, 1, 0.1, 0.01]}}
+                   'LG': {'max_iter': [500, 1000, 2000],
+                          'C':        [10, 1, 0.1, 0.01]}}
 
     reg_params = {'LR': {'fit_intercept': [True]},
-                  'DT': {'max_depth': [2*i for i in range(1, 7)],
-                         'max_features': [1, 2, 5, 10]}}
+                  'DT': {'max_depth':    [2*i for i in range(1, 5)],
+                         'max_features': [1, 2, 5]}}
+
+
+
+
+
+
+
+
+
+
+
     ctr = 0
     for file_name, target_column, cols_to_remove, variables_to_be_made_binary, sensative_features, flip_0_and_1_labes in info:
+        print(file_name)
         outputs = []
 
         #################
@@ -69,7 +81,7 @@ if __name__ == '__main__':
         equa_clfs = {'GB_equal':         GridSearchCV(GradientBoostingClassifier(),                                                              param_grid=base_params['GB'],                n_jobs=n_jobs, scoring=scoring),
                      'SV_equal':         GridSearchCV(SVC(probability=True),                                                                     param_grid=base_params['SV'],                n_jobs=n_jobs, scoring=scoring),
                      'LG_equal':         GridSearchCV(LogisticRegression(),                                                                      param_grid=base_params['LG'],                n_jobs=n_jobs, scoring=scoring)}
-        fair_lrgs = {'LR_' + str(gamma): GridSearchCV(FModel(sensative_features, predictor=LinearRegression(),      gamma=gamma, max_iters=200), param_grid=gen_param_grid(reg_params['LR']), n_jobs=n_jobs, scoring=scoring) for gamma in gammas}
+        fair_lrgs = {'LR_' + str(gamma): FModel(sensative_features, predictor=LinearRegression(),                   gamma=gamma, max_iters=200)                                                                              for gamma in gammas}
         fair_dtrs = {'DT_' + str(gamma): GridSearchCV(FModel(sensative_features, predictor=DecisionTreeRegressor(), gamma=gamma, max_iters=200), param_grid=gen_param_grid(reg_params['DT']), n_jobs=n_jobs, scoring=scoring) for gamma in gammas}
 
         #############################
@@ -84,19 +96,20 @@ if __name__ == '__main__':
                             'models': {}})
 
             for clf_name, clf in list(base_clfs.items()) + list(equa_clfs.items()) + list(fair_lrgs.items()) + list(fair_dtrs.items()):
-                
+                print(clf_name, end=', ')
                 if 'equal' in clf_name:
-                    clf.fit(X_train, y_train, sample_weights=gen_sample_weights(X, sensative_features[0]))
+                    clf.fit(X_train, y_train, sample_weight=gen_sample_weights(X_train, sensative_features[0]))
                 else:
                     clf.fit(X_train, y_train)
 
-                pred_p = clf.predict_proba(X_test)
+                pred_p = clf.predict_proba(X_test)[:, 1]
                 print(roc_auc_score(y_test, pred_p))
                 # SAVE EACH MODEL AFTER TRAINING
                 outputs[-1]['models'][clf_name] = clf
 
         with open('Models/' + f_save_names[ctr] + '.pickle', 'wb') as handle:
             pkl.dump(outputs, handle, pkl.HIGHEST_PROTOCOL)
+        ctr += 1
 
 
 
