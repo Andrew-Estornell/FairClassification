@@ -1,4 +1,4 @@
-import pickle5 as pkl
+import pickle as pkl
 from sklearn.metrics import balanced_accuracy_score, roc_auc_score, accuracy_score
 import numpy as np
 import pandas
