@@ -107,7 +107,7 @@ if __name__ == '__main__':
                 # SAVE EACH MODEL AFTER TRAINING
                 outputs[-1]['models'][clf_name] = clf
 
-        with open('Models/' + f_save_names[ctr] + '.pickle', 'wb') as handle:
+        with open('Outputs/' + f_save_names[ctr] + '.pickle', 'wb') as handle:
             pkl.dump(outputs, handle, pkl.HIGHEST_PROTOCOL)
         ctr += 1
 

@@ -3,7 +3,7 @@ from sklearn.metrics import balanced_accuracy_score, roc_auc_score, accuracy_sco
 import numpy as np
 import pandas
 if __name__=='__main__':
-    f_names = ['Models/adult.pickle', 'Models/recidivism.pickle', 'Models/lawschool.pickle', 'Models/student.pickle']
+    f_names = ['Outputs/adult.pickle', 'Outputs/recidivism.pickle', 'Outputs/lawschool.pickle', 'Outputs/student.pickle']
     for f_name in f_names:
         d = pkl.load(open(f_name, 'rb'))
         avg_scores = {name: [0, 0, 0] for name in d[0]['models'].keys()}

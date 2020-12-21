@@ -4,8 +4,8 @@ import numpy as np
 import pandas
 from numpy.linalg import norm
 if __name__=='__main__':
-    f_names = ['Models/adult.pickle', 'Models/recidivism.pickle', 'Models/lawschool.pickle', 'Models/student.pickle']
-    f_names_small = ['Models/adult.pickle']
+    f_names = ['Outputs/adult.pickle', 'Outputs/recidivism.pickle', 'Outputs/lawschool.pickle', 'Outputs/student.pickle']
+    f_names_small = ['Outputs/adult.pickle']
     for f_name in f_names_small:
         d = pkl.load(open(f_name, 'rb'))
         avg_scores = {name: [0, 0, 0] for name in d[0]['models'].keys()}
