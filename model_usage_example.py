@@ -1,7 +1,7 @@
 import pickle as pkl
 from sklearn.metrics import balanced_accuracy_score, roc_auc_score, accuracy_score
 import numpy as np
-
+import pandas
 if __name__=='__main__':
     f_names = ['Models/adult.pickle', 'Models/recidivism.pickle', 'Models/lawschool.pickle', 'Models/student.pickle']
     for f_name in f_names:
