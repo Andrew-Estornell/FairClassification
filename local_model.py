@@ -22,7 +22,11 @@ def measure_fairness(clf,X,original_pred,original_pred_p,alpha,features_to_lie):
         matching = [s for s in X.columns if feature in s]
         combination_list.append(matching)
 
+    i = 0
     for tuple in itertools.product(*combination_list):
+        print(list(itertools.product(*combination_list)))
+        print(float(i)/len(list(itertools.product(*combination_list))))
+        i += 1
         l1_norm_diff_dict = {}
         improvement_list = []
         no_changed_on_list = []
@@ -57,16 +61,17 @@ def measure_fairness(clf,X,original_pred,original_pred_p,alpha,features_to_lie):
             l1_norm_diff = l1_original - l1_lied
 
             l1_norm_diff_dict[neg_index] = l1_norm_diff
+
             pred_lied, pred_p_lied = clf.predict(X_copy), clf.predict_proba(X_copy)[:, 1]
             vector_diff = pred_lied - original_pred
             mean_vector_diff = vector_diff.mean()
-        print(valid_indices)
+        #print(valid_indices)
         for neg_index in valid_indices:
             # if original_pred[neg_index] > pred_lied[neg_index]:
             #     print(neg_index)
             improvement = (pred_lied[neg_index] - original_pred[neg_index]) - alpha * l1_norm_diff_dict[neg_index]
             improvement_list.append(improvement)
-        print(improvement_list)
+        #print(improvement_list)
         np_improvement_list = np.array(improvement_list)
         mean_improvement_dict['_'.join(tuple)] = np_improvement_list.mean()
         #print(mean_improvement_dict)
@@ -74,8 +79,8 @@ def measure_fairness(clf,X,original_pred,original_pred_p,alpha,features_to_lie):
 
 
 if __name__=='__main__':
-    f_names = ['Models/adult.pickle', 'Models/recidivism.pickle', 'Models/lawschool.pickle', 'Models/student.pickle']
-    f_names_small = ['Models/adult.pickle']
+    f_names = ['Outputs/adult.pickle', 'Models/recidivism.pickle', 'Models/lawschool.pickle', 'Models/student.pickle']
+    f_names_small = ['Outputs/adult.pickle']
     for f_name in f_names_small:
         d = pkl.load(open(f_name, 'rb'))
         avg_scores = {name: [0, 0, 0] for name in d[0]['models'].keys()}

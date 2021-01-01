@@ -10,7 +10,7 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import roc_auc_score, balanced_accuracy_score, make_scorer
 
 from fair.model import Model as FModel
-from model_training.prep import prep
+from prep.prep import prep
 
 
 def gen_param_grid(param_grid):
