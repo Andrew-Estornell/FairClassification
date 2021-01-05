@@ -115,6 +115,8 @@ if __name__ == '__main__':
             g0_index = [i for i in range(len(X_test)) if X_test[sensative_features[0]].iloc[i] == 0]
             g1_index = [i for i in range(len(X_test)) if X_test[sensative_features[0]].iloc[i] == 1]
             for clf_name, clf in list(base_clfs.items()) + list(equa_clfs.items()) + list(fair_lrgs.items()) + list(fair_dtrs.items()):
+                if 'SV' in clf_name:
+                    continue
                 print(clf_name, end=', ')
                 split_data[clf_name] = {}
                 
