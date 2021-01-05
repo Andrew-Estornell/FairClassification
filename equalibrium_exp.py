@@ -8,13 +8,16 @@ import time as time
 
 def false_positive_rate(pred, y_true):
 	n = len(y_true)
-	f_poses = sum(1 for i in range(n) if pred[i]==1 and y_true[i]==0)
+	f_poses  = sum(1 for i in range(n) if pred[i]==1 and y_true[i]==0)
 	tot_negs = sum(1 for i in range(n) if y_true[i]==0)
-	if f_poses/float(tot_negs) > 1:
-		print(f_poses, tot_negs)
-		print(pred)
-		print(y_true)
 	return f_poses/float(tot_negs)
+
+def false_negative_rate(pred, y_true):
+	n = len(y_true)
+	f_neg   = sum(1 for i in range(n) if pred[i] == 0 and y_true[i] == 1)
+	tot_pos = sum(1 for i in range(n) if y_true[i] == 1)
+	return f_neg/float(tot_pos)
+
 
 def compute_metric_across_groups(y_true, pred, g0_index, g1_index, metric):
 	return metric(pred[g0_index], y_true[g0_index]), metric(pred[g1_index], y_true[g1_index])
@@ -44,7 +47,8 @@ if __name__=='__main__':
 	alphas = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.1, 0.01, 0]
 	# Saves the false positive rates to a pickle file in Outputs
 	#    - inner dict will be indexed by classifier names
-	results_saved = {(f_name, alpha): {} for f_name in f_names for alpha in alphas}
+	results_saved = {**{(f_name, alpha, 'fp'): {} for f_name in f_names for alpha in alphas},
+					 **{(f_name, alpha, 'fn'): {} for f_name in f_names for alpha in alphas}}
 	#########################################
 	# Main experiment loop
 	# Iterates over each file
@@ -68,6 +72,10 @@ if __name__=='__main__':
 			avg_fp_true_g0, avg_fp_true_g1 = {name: 0 for name in d[0]['models'].keys()}, {name: 0 for name in
 																						   d[0]['models'].keys()}
 			avg_fp_opti_g0, avg_fp_opti_g1 = {name: 0 for name in d[0]['models'].keys()}, {name: 0 for name in
+																						   d[0]['models'].keys()}
+			avg_fn_true_g0, avg_fn_true_g1 = {name: 0 for name in d[0]['models'].keys()}, {name: 0 for name in
+																						   d[0]['models'].keys()}
+			avg_fn_opti_g0, avg_fn_opti_g1 = {name: 0 for name in d[0]['models'].keys()}, {name: 0 for name in
 																						   d[0]['models'].keys()}
 
 			# Experiments are averages over each of the 5 splits from our files
@@ -111,11 +119,19 @@ if __name__=='__main__':
 					g0_true_fp, g1_true_fp = compute_metric_across_groups(y, pred,      g0_index, g1_index, false_positive_rate)
 					g0_opti_fp, g1_opti_fp = compute_metric_across_groups(y, opt_preds, g0_index, g1_index, false_positive_rate)
 
+					g0_true_fn, g1_true_fn = compute_metric_across_groups(y, pred, g0_index, g1_index,false_negative_rate)
+					g0_opti_fn, g1_opti_fn = compute_metric_across_groups(y, opt_preds, g0_index, g1_index, false_negative_rate)
+
 					# Adding FPs for current split to the average
 					avg_fp_true_g0[clf_name] += g0_true_fp/float(len(d))
 					avg_fp_opti_g0[clf_name] += g0_opti_fp/float(len(d))
 					avg_fp_true_g1[clf_name] += g1_true_fp/float(len(d))
 					avg_fp_opti_g1[clf_name] += g1_opti_fp/float(len(d))
+
+					avg_fn_true_g0[clf_name] += g0_true_fn / float(len(d))
+					avg_fn_opti_g0[clf_name] += g0_opti_fn / float(len(d))
+					avg_fn_true_g1[clf_name] += g1_true_fn / float(len(d))
+					avg_fn_opti_g1[clf_name] += g1_opti_fn / float(len(d))
 
 
 			# For each file, displaying the false positive rates between groups from each of the clfs
@@ -123,7 +139,6 @@ if __name__=='__main__':
 			print("ALPHA", alpha)
 			# Grabbing the false positive rate from each clf, of each group.
 			for g0_true, g1_true, g0_opti, g1_opti in zip(avg_fp_true_g0.items(), avg_fp_true_g1.items(), avg_fp_opti_g0.items(), avg_fp_opti_g1.items()):
-				#print(g0_true, g1_true, g0_opti, g1_opti)
 				clf_name = g0_true[0]
 				g0_fp_true = g0_true[1]
 				g1_fp_true = g1_true[1]
@@ -131,15 +146,26 @@ if __name__=='__main__':
 				g1_fp_opti = g1_opti[1]
 
 				# Save false positive as (true0, true1, opti0, opti1) tuple
-				results_saved[(f_name, alpha)][clf_name] = (g0_fp_true, g1_fp_true, g0_fp_true, g1_fp_opti)
-			results_saved[(f_name, alpha)][alpha] = lies_for_each_split
+				results_saved[(f_name, alpha, 'fp')][clf_name] = (g0_fp_true, g1_fp_true, g0_fp_opti, g1_fp_opti)
+
+			for g0_true, g1_true, g0_opti, g1_opti in zip(avg_fn_true_g0.items(), avg_fn_true_g1.items(), avg_fn_opti_g0.items(), avg_fn_opti_g1.items()):
+				clf_name = g0_true[0]
+				g0_fn_true = g0_true[1]
+				g1_fn_true = g1_true[1]
+				g0_fn_opti = g0_opti[1]
+				g1_fn_opti = g1_opti[1]
+
+				# Save false positive as (true0, true1, opti0, opti1) tuple
+				results_saved[(f_name, alpha, 'fn')][clf_name] = (g0_fn_true, g1_fn_true, g0_fn_opti, g1_fn_opti)
+
+			results_saved[(f_name, alpha, 'fp')][alpha] = lies_for_each_split
 				#print(clf_name, end=':: ')
 				#print("False positive diff g0 vs g1 || true:", round(abs(g0_fp_true - g1_fp_true), 2),
 				#	                               '|| opti:', round(abs(g0_fp_opti - g1_fp_opti), 2))
 
 			print()
 		# Save final results
-		with open('Outputs/false_postive_results_2' + str(j) + '.pickle', 'wb') as handle:
+		with open('Outputs/false_postive_results_2_agreed' + str(j) + '.pickle', 'wb') as handle:
 			pkl.dump(results_saved, handle, pkl.HIGHEST_PROTOCOL)
 
 
