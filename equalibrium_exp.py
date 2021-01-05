@@ -23,19 +23,23 @@ def compute_metric_across_groups(y_true, pred, g0_index, g1_index, metric):
 if __name__=='__main__':
 
 	# file name for pre-trained models
-	f_names        = ['Outputs/adult.pickle', 'Outputs/recidivism.pickle', 'Outputs/lawschool.pickle',
-		 'Outputs/student.pickle']
+	f_names        = ['Outputs/adult.pickle',
+					  'Outputs/recidivism.pickle',
+					  'Outputs/lawschool.pickle',
+		 			  'Outputs/student.pickle']
 	# protected attributes for each of the files
-	sense_feats    = ['race', 'WHITE', 'race',
-		 'sex']
+	sense_feats    = ['race',
+					  'WHITE',
+					  'race',
+		 		  	  'sex']
 	# Columns which agents are able to lie abour
 	#     - each row corresponds to a file in f_names
-	#manip_cols_all = [#['race', 'sex', 'workclass', 'marital-status', 'relationship', 'occupation'],
-	#			      #['WHITE', 'ALCHY', 'JUNKY', 'MARRIED', 'MALE', 'WORKREL', 'PROPTY', "PERSON", "FELON", "SUPER"],
-	#			      #['gender', 'race', 'fulltime', 'fam_inc'],
-	#			      ['sex', 'freetime', 'studytime', 'goout', 'Fedu']]
+	manip_cols_all = [['race', 'sex', 'workclass', 'marital-status'],
+				      ['WHITE', 'ALCHY', 'JUNKY', 'MARRIED', 'MALE'],
+				      ['gender', 'race', 'fulltime', 'fam_inc'],
+				      ['sex', 'freetime', 'studytime', 'goout', 'Fedu']]
 
-	manip_cols_all = [[feat] for feat in sense_feats]
+	#manip_cols_all = [[feat] for feat in sense_feats]
 	# Scalar for cost of lying
 	alphas = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.1, 0.01, 0]
 	# Saves the false positive rates to a pickle file in Outputs
