@@ -4,6 +4,7 @@ import pandas as pd
 import pickle as pkl
 import optimal_decision_making.manipulation as manip
 from sklearn.metrics import roc_auc_score, balanced_accuracy_score, accuracy_score
+from train_models import gen_sample_weights
 
 def false_positive_rate(pred, y_true):
 	n = len(y_true)
@@ -14,7 +15,7 @@ def false_positive_rate(pred, y_true):
 def compute_metric_across_groups(y_true, pred, g0_index, g1_index, metric):
 	return metric(pred[g0_index], y_true[g0_index]), metric(pred[g1_index], y_true[g1_index])
 
-def adv_retraining(X, y, clf, max_iters, manip_cols, alpha):
+def adv_retraining(X, y, clf_name, clf, max_iters, manip_cols, alpha):
     clf.fit(X, y)
     for j in range(max_iters):
         [all_new_X], opt_pred_ps_all_clfs, opt_preds_all_clfs = manip.optimal_agent_strats_for_cata_features(X, y, manip_cols, np.array([clf]), alpha=alpha, decision_type='preds')
@@ -26,6 +27,7 @@ def adv_retraining(X, y, clf, max_iters, manip_cols, alpha):
     return clf
 
 if __name__=='__main__':
+    np.random.seed(101)
     # file name for pre-trained models
     f_names        = ['../Outputs/adult.pickle', '../Outputs/recidivism.pickle', '../Outputs/lawschool.pickle', '../Outputs/student.pickle']
     
@@ -38,9 +40,9 @@ if __name__=='__main__':
    				      ['gender', 'race'],
    				      ['sex', 'freetime', 'studytime', 'famrel']]#, 'goout', 'health']]
     #scalar for cost of lying
-    alphas = [1, 0.5, 0.3, 0.2, 0.15, 0.1, 0.05, 0.01, 0.005, 0.001, 0.0005]
-    alphas = [1,0.1,0.01,0.001]
-
+    #ßalphas = [1, 0.5, 0.3, 0.2, 0.15, 0.1, 0.05, 0.01, 0.005, 0.001, 0.0005]
+    alphas = [1,0.1,0.01]
+    num_iters = 5
    	#########################################
     for f_name, sense_feat, manip_cols in zip(f_names, sense_feats, manip_cols_all):
         d = pkl.load(open(f_name, 'rb'))
@@ -48,7 +50,7 @@ if __name__=='__main__':
         for i in range(len(d)):
             split = d[i]
             retrained_split = {'data':split['data'], 'alpha_clfs':{}}
-            X, y = split['data']
+            testX, testy = split['data']
             #y = y.to_numpy()
             clfs = split['models']
             for alpha in alphas:
@@ -56,7 +58,7 @@ if __name__=='__main__':
                     retrained_split['alpha_clfs'][alpha] = {}
                 for clfname in split['models'].keys():
                     clf = split['models'][clfname]
-                    alpha_optimized_clf = adv_retraining(X,y, clf, 5, manip_cols, alpha)
+                    alpha_optimized_clf = adv_retraining(X,y, clfname, clf, num_iters, manip_cols, alpha)
                     retrained_split['alpha_clfs'][alpha][clfname]=alpha_optimized_clf
             d_retrained.append(retrained_split)
         
