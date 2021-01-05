@@ -58,7 +58,7 @@ if __name__=='__main__':
                     clf = split['models'][clfname]
                     alpha_optimized_clf = adv_retraining(X,y, clf, 5, manip_cols, alpha)
                     retrained_split['alpha_clfs'][alpha][clfname]=alpha_optimized_clf
-        d_retrained.append(retrained_split)
+            d_retrained.append(retrained_split)
         
         with open(f_name[:-7]+'_manip.pickle', 'wb') as handle:
            pkl.dump(d_retrained, handle, pkl.HIGHEST_PROTOCOL)
