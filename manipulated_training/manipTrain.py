@@ -49,7 +49,7 @@ if __name__=='__main__':
             split = d[i]
             retrained_split = {'data':split['data'], 'alpha_clfs':{}}
             X, y = split['data']
-            y = y.to_numpy()
+            #y = y.to_numpy()
             clfs = split['models']
             for alpha in alphas:
                 if alpha not in retrained_split['alpha_clfs'].keys():
