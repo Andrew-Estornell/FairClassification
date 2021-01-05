@@ -22,6 +22,9 @@ def false_negative_rate(pred, y_true):
 def compute_metric_across_groups(y_true, pred, g0_index, g1_index, metric):
 	return metric(pred[g0_index], y_true[g0_index]), metric(pred[g1_index], y_true[g1_index])
 
+def compute_roc_across_groups(y_true, pred, g0_index, g1_index, metric):
+	return metric(y_true[g0_index], pred[g0_index]), metric(y_true[g1_index],pred[g1_index])
+
 
 if __name__=='__main__':
 
