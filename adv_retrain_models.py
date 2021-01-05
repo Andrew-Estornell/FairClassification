@@ -18,6 +18,7 @@ from sklearn.metrics import roc_auc_score, balanced_accuracy_score, make_scorer
 
 from fair.model import Model as FModel
 from prep.prep import prep
+import optimal_decision_making.manipulation as manip
 
 
 def gen_param_grid(param_grid):
@@ -60,13 +61,28 @@ if __name__ == '__main__':
                          'max_features': [1, 2, 5]}}
     
     num_iters = 5
-    alphas = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.1, 0.01, 0]
+    manip_cols_all = [['race', 'sex', 'workclass', 'marital-status'],
+				      ['WHITE', 'ALCHY', 'JUNKY', 'MARRIED', 'MALE'],
+				      ['gender', 'race', 'fulltime', 'fam_inc'],
+				      ['sex', 'freetime', 'studytime', 'goout', 'Fedu']]
+    #alphas = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.1, 0.01, 0]
 
     ctr = 0
     for file_name, target_column, cols_to_remove, variables_to_be_made_binary, sensative_features, flip_0_and_1_labes in info:
         print(file_name)
         outputs = []
-
+        if 'adult' in file_name:
+            alpha = 0.2
+            manip_cols = manip_cols_all[0]
+        elif 'Data_1980' in file_name:
+            alpha = 0.7
+            manip_cols = manip_cols_all[1]
+        elif 'lawschool' in file_name:
+            alpha = 0.1
+            manip_cols = manip_cols_all[2]
+        else:
+            alpha = 0.1
+            manip_cols = manip_cols_all[3]
         #################
         # PREPROCESS DATA
         #################
@@ -91,17 +107,34 @@ if __name__ == '__main__':
         for train_index, test_index in kf.split(X, y):
             X_train, y_train, X_test, y_test = X.iloc[train_index], y.iloc[train_index], X.iloc[test_index], y.iloc[test_index]
 
-            # SAVE DATA
             outputs.append({'data':   (X_test, y_test),
                             'models': {}})
 
             for clf_name, clf in list(base_clfs.items()) + list(equa_clfs.items()) + list(fair_lrgs.items()) + list(fair_dtrs.items()):
                 print(clf_name, end=', ')
+                
+                if 'equal' in clf_name:
+                    clf.fit(X_train, y_train, sample_weight=gen_sample_weights(X_train, sensative_features[0]))
+                else:
+                    clf.fit(X_train, y_train)
+                
+                [all_new_X], opt_pred_ps_all_clfs, opt_preds_all_clfs = manip.optimal_agent_strats_for_cata_features(X_train, y_train, manip_cols, np.array([clf]), alpha=alpha, decision_type='preds')
+                new_X=[]
+                for row in all_new_X:
+                    new_X.append(row[0])
+                new_X = pd.DataFrame(new_X, columns=X.columns)
+                
                 for i in range(num_iters):
                     if 'equal' in clf_name:
                         clf.fit(X_train, y_train, sample_weight=gen_sample_weights(X_train, sensative_features[0]))
                     else:
                         clf.fit(X_train, y_train)
+                    [all_new_X], opt_pred_ps_all_clfs, opt_preds_all_clfs = manip.optimal_agent_strats_for_cata_features(X, y, manip_cols, np.array([clf]), alpha=alpha, decision_type='preds')
+                    new_X=[]
+                    for row in all_new_X:
+                        new_X.append(row[0])
+                    new_X = pd.DataFrame(new_X, columns=X.columns)
+                    clf.fit(new_X, y)
     
                     pred_p = clf.predict_proba(X_test)[:, 1]
                     print(roc_auc_score(y_test, pred_p))
