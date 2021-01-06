@@ -47,8 +47,8 @@ if __name__ == '__main__':
 
     scoring = make_scorer(roc_auc_score, needs_proba=True)
     n_jobs = -1
-    gammas = [0.2, 0.1, 0.01]
-    k = 5
+    gammas = [0.1]#[0.2, 0.1, 0.01]
+    k = 2
 
     base_params = {'GB': {'max_depth':    [2, 5, 10],
                           'n_estimators': [75*i + 50 for i in range(5)]},
@@ -61,7 +61,7 @@ if __name__ == '__main__':
                   'DT': {'max_depth':    [2*i for i in range(1, 5)],
                          'max_features': [1, 2, 5]}}
     
-    num_iters = 5
+    num_iters = 30
     manip_cols_all = [['race', 'sex', 'workclass', 'marital-status'],
 				      ['WHITE', 'ALCHY', 'JUNKY', 'MARRIED', 'MALE'],
 				      ['gender', 'race', 'fulltime', 'fam_inc'],
@@ -72,6 +72,10 @@ if __name__ == '__main__':
     for file_name, target_column, cols_to_remove, variables_to_be_made_binary, sensative_features, flip_0_and_1_labes in info:
         print(file_name)
         outputs = []
+        if 'lawschool' not in file_name:
+            ctr+=1
+            continue
+        
         if 'adult' in file_name:
             alpha = 0.2
             manip_cols = manip_cols_all[0]
@@ -98,8 +102,8 @@ if __name__ == '__main__':
         equa_clfs = {'GB_equal':         GridSearchCV(GradientBoostingClassifier(),                                                              param_grid=base_params['GB'],                n_jobs=n_jobs, scoring=scoring),
                      'SV_equal':         GridSearchCV(SVC(probability=True),                                                                     param_grid=base_params['SV'],                n_jobs=n_jobs, scoring=scoring),
                      'LG_equal':         GridSearchCV(LogisticRegression(),                                                                      param_grid=base_params['LG'],                n_jobs=n_jobs, scoring=scoring)}
-        fair_lrgs = {'LR_' + str(gamma): FModel(sensative_features, predictor=LinearRegression(),                   gamma=gamma, max_iters=10)                                                                              for gamma in gammas}
-        fair_dtrs = {'DT_' + str(gamma): GridSearchCV(FModel(sensative_features, predictor=DecisionTreeRegressor(), gamma=gamma, max_iters=10), param_grid=gen_param_grid(reg_params['DT']), n_jobs=n_jobs, scoring=scoring) for gamma in gammas}
+        fair_lrgs = {'LR_' + str(gamma): FModel(sensative_features, predictor=LinearRegression(),                   gamma=gamma, max_iters=20)                                                                              for gamma in gammas}
+        fair_dtrs = {'DT_' + str(gamma): FModel(sensative_features, predictor=DecisionTreeRegressor(max_depth=5), gamma=gamma, max_iters=20) for gamma in gammas}
 
         #############################
         # SPLIT DATA AND TRAIN MODELS
@@ -115,6 +119,8 @@ if __name__ == '__main__':
             g0_index = [i for i in range(len(X_test)) if X_test[sensative_features[0]].iloc[i] == 0]
             g1_index = [i for i in range(len(X_test)) if X_test[sensative_features[0]].iloc[i] == 1]
             for clf_name, clf in list(base_clfs.items()) + list(equa_clfs.items()) + list(fair_lrgs.items()) + list(fair_dtrs.items()):
+                if '0.1' not in clf_name:
+                    continue
                 if 'SV' in clf_name:
                     continue
                 print(clf_name, end=', ')
@@ -142,19 +148,21 @@ if __name__ == '__main__':
                 for row in all_new_X:
                     new_X.append(row[0])
                 new_X = pd.DataFrame(new_X, columns=X.columns)
-                
+                all_X = new_X.copy()
+                all_y = y_train
                 for i in range(num_iters):
                     if 'equal' in clf_name:
-                        clf.fit(X_train, y_train, sample_weight=gen_sample_weights(X_train, sensative_features[0]))
+                        clf.fit(all_X, all_y, sample_weight=gen_sample_weights(new_X, sensative_features[0]))
                     else:
-                        clf.fit(X_train, y_train)
-                    [all_new_X], opt_pred_ps_all_clfs, opt_preds_all_clfs = manip.optimal_agent_strats_for_cata_features(X, y, manip_cols, np.array([clf]), alpha=alpha, decision_type='preds')
+                        clf.fit(all_X, all_y)
+                    [all_new_X], opt_pred_ps_all_clfs, opt_preds_all_clfs = manip.optimal_agent_strats_for_cata_features(X_train, y_train, manip_cols, np.array([clf]), alpha=alpha, decision_type='preds')
                     new_X=[]
                     for row in all_new_X:
                         new_X.append(row[0])
                     new_X = pd.DataFrame(new_X, columns=X.columns)
-                    clf.fit(new_X, y)
-    
+                    #clf.fit(new_X, y)
+                    all_X = pd.concat([all_X, new_X])
+                    all_y = pd.concat([all_y, y_train])
                     pred_p = clf.predict_proba(X_test)[:, 1]
                     pred = clf.predict(X_test)
                     print(roc_auc_score(y_test, pred_p))
@@ -169,7 +177,7 @@ if __name__ == '__main__':
                 
                     #outputs[-1]['models'][clf_name] = clf
             results_data.append(split_data)
-        with open('Outputs/' + f_save_names[ctr] + '_advRetrained.pickle', 'wb') as handle:
+        with open('Outputs/' + f_save_names[ctr] + '_advRetrained35combo.pickle', 'wb') as handle:
             pkl.dump(results_data, handle, pkl.HIGHEST_PROTOCOL)
         ctr += 1
 
