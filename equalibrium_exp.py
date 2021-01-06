@@ -42,7 +42,7 @@ if __name__=='__main__':
 				      ['gender', 'race', 'fulltime', 'fam_inc'],
 				      ['sex', 'freetime', 'studytime', 'goout', 'Fedu']]
 
-	#manip_cols_all = [[feat] for feat in sense_feats]
+	manip_cols_all = [[feat] for feat in sense_feats]
 	# Scalar for cost of lying
 	alphas = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.1, 0.01, 0]
 	# Saves the false positive rates to a pickle file in Outputs
@@ -165,7 +165,7 @@ if __name__=='__main__':
 
 			print()
 		# Save final results
-		with open('Outputs/false_postive_results_2_agreed' + str(j) + '.pickle', 'wb') as handle:
+		with open('Outputs/false_postive_results_' + str(j) + '.pickle', 'wb') as handle:
 			pkl.dump(results_saved, handle, pkl.HIGHEST_PROTOCOL)
 
 
