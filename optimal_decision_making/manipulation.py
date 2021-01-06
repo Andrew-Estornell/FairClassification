@@ -1,5 +1,6 @@
 import numpy as np
 import itertools as itr
+import copy as copy
 
 
 def optimal_agent_strats_for_cata_features(X, y, manip_cols, clfs, alpha=0.1, f=lambda a1, a2: np.linalg.norm((a1 - a2), ord=1),
@@ -136,7 +137,7 @@ def optimal_agent_strats_for_cata_features_2(X, y, manip_cols, clfs, alpha=0.1, 
             indexes_left_to_search = [i for i in optimal_strats if optimal_strats[i] is None]
             if len(indexes_left_to_search) == 0:
                 break
-            X_search = 1*X[indexes_left_to_search]
+            X_search = copy.deepcopy(X[indexes_left_to_search])
             for col_index in manip_col_indexes_falt:
                 X_search[:,col_index] = lies[l][col_index]
             costs = np.array([alpha*f(X_search[i], X[indexes_left_to_search[i]]) for i in range(len(indexes_left_to_search))])
@@ -154,8 +155,105 @@ def optimal_agent_strats_for_cata_features_2(X, y, manip_cols, clfs, alpha=0.1, 
             if optimal_strats[i] is None:
                 optimal_strats[i] = X[i]
         best_strats_for_each_clf.append(list(optimal_strats.values()))
-
+        # for ii, strat in enumerate(list(optimal_strats.values())):
+        #     for xx_true, xx_opt in zip(X[ii], strat):
+        #         if xx_true != xx_opt:
+        #             print(X[ii], 'not equal', strat)
     return np.array(best_strats_for_each_clf), [], []#[clf.predict(np.array(best_strats_for_each_clf[i])) for i, clf in enumerate(clfs)], [clf.predict_proba(np.array(best_strats_for_each_clf[i])) for i, clf in enumerate(clfs)]
+
+
+
+def optimal_agent_strats_for_cata_features_with_audit(X, y, manip_cols, clfs, ps, alpha=0.1, f=lambda a1, a2: np.linalg.norm((a1 - a2), ord=1),
+                                           decision_type='preds'):
+    """
+    Finds the optimal lie for each agent in X, for each of the clfs,
+
+    :param manip_cols:     columns able to be lied about (these are given as columns prior to one-hot-encoding)
+    :param clfs:           list of classifiers
+    :param alpha:          scalar for cost function
+    :param f:              cost function and agent must pay for submitting a2 when they originally had type a1
+    :param decision_type:  {'perds', 'proba'} determines if agents care about labels or probabilities
+    """
+
+    d = len(X.columns)
+    # Nested list where first dimension is each manipulable columns
+    #                 - second dimension is each column which is associated with the manipulable column after encoding
+    manip_col_indexes  = [[i for i, col in enumerate(X.columns) if prefix in col]
+                          for prefix in manip_cols]
+    # Index of all columns which cannot be lied about (after one-hot-encoding)
+    static_col_indexes = [i for i in range(d) if not any(i in indexes for indexes in manip_col_indexes)]
+    manip_col_indexes_falt = [i for i in range(d) if i not in static_col_indexes]
+    X = X.to_numpy()
+
+    # Computes all possible lies that agents are able to tell
+    # lies is a template, since each agent all have the same manipulable columns, we need only compute all possible lies
+    # once. Agents can then choose from this set without the need to recompute.
+    lies = compute_all_lies(manip_col_indexes, d)
+
+    lie_indexes_by_lowest_cost = []
+    for x in X:
+        sorted_costs_and_index = sorted([(l, alpha*f(x[manip_col_indexes_falt], lie[manip_col_indexes_falt]))
+                                        for l, lie in enumerate(lies)], key=lambda xx: xx[1])
+        sorted_indexes = [l for l, _ in sorted_costs_and_index]
+        lie_indexes_by_lowest_cost.append(sorted_indexes)
+
+
+
+
+    best_strats_for_each_clf = []
+    best_costs_for_each_clf  = []
+    for clf_index, clf in enumerate(clfs):
+        p = ps[clf_index]
+        optimal_strats = {i: None for i in range(len(X))}
+        optimal_costs  = {i: 0 for i in range(len(X))}
+        pred = clf.predict(X)
+        for i, score in enumerate(pred):
+            if score == 1:
+                optimal_strats[i] = X[i]
+        for l in range(len(lies)):
+            indexes_left_to_search = [i for i in optimal_strats if optimal_strats[i] is None]
+            if len(indexes_left_to_search) == 0:
+                break
+            X_search = copy.deepcopy(X[indexes_left_to_search])
+            for col_index in manip_col_indexes_falt:
+                X_search[:,col_index] = lies[l][col_index]
+            original_costs = np.array([alpha*f(X_search[i], X[indexes_left_to_search[i]]) for i in range(len(indexes_left_to_search))])
+            costs = original_costs +  np.array([sum(p[l]*int(np.array_equiv(X_search[i][manip_col_indexes[l]],X[indexes_left_to_search[i]][manip_col_indexes[l]])) for l in range(len(manip_col_indexes)))
+                               for i in range(len(indexes_left_to_search))])
+            #print(costs)
+            #print(costs)
+
+
+
+            if decision_type == 'preds':
+                pred = clf.predict(X_search)
+
+                for i in range(len(pred)):
+                    if original_costs[i] >= 1:
+                        optimal_strats[indexes_left_to_search[i]] = X[indexes_left_to_search[i]]
+                    elif pred[i] == 1 and costs[i] < 1:
+                        optimal_strats[indexes_left_to_search[i]] = X_search[i]
+                        optimal_costs[indexes_left_to_search[i]]  = costs[i]
+        for i in optimal_strats:
+            if optimal_strats[i] is None:
+                optimal_strats[i] = X[i]
+        best_strats_for_each_clf.append(list(optimal_strats.values()))
+        best_costs_for_each_clf.append(list(optimal_costs.values()))
+        # for ii, strat in enumerate(list(optimal_strats.values())):
+        #     for xx_true, xx_opt in zip(X[ii], strat):
+        #         if xx_true != xx_opt:
+        #             print(X[ii], 'not equal', strat)
+    best_strats_for_each_clf = np.array(best_strats_for_each_clf)
+    best_costs_for_each_clf  = np.array(best_costs_for_each_clf)
+    lie_count_by_index = [[0 for _ in range(len(manip_col_indexes))] for _ in range(len(clfs))]
+    for clf_index, best_strat in enumerate(best_strats_for_each_clf):
+        for i, col_index in enumerate(manip_col_indexes):
+            lie_count_by_index[clf_index][i] = sum(1 for strat, x in zip(best_strat, X) if np.array_equiv(strat[col_index], x[col_index]))
+
+
+
+
+    return best_strats_for_each_clf, lie_count_by_index, best_costs_for_each_clf#[clf.predict(np.array(best_strats_for_each_clf[i])) for i, clf in enumerate(clfs)], [clf.predict_proba(np.array(best_strats_for_each_clf[i])) for i, clf in enumerate(clfs)]
 
 
 
